@@ -2,26 +2,30 @@ import dataclasses
 
 
 @dataclasses.dataclass
-class Shelly:
-    url: str
-    api_key: str
+class ShellyCloud:
+    access_token: str
+    refresh_token: str
+    token_type: str
+    expires_in: int
 
     @staticmethod
     def from_dict(data: dict):
-        return Shelly(
-            url=data['url'],
-            api_key=data['api_key']
+        return ShellyCloud(
+            access_token=data['access_token'],
+            refresh_token=data['refresh_token'],
+            token_type=data['token_type'],
+            expires_in=data['expires_in'],
         )
 
 
 @dataclasses.dataclass
 class Setting:
     user_id: str
-    shelly: Shelly
+    shelly_cloud: ShellyCloud
 
     @staticmethod
     def from_dict(data: dict):
         return Setting(
             user_id=data['user_id'],
-            shelly=Shelly.from_dict(data['shelly'])
+            shelly_cloud=ShellyCloud.from_dict(data['shelly_cloud'])
         )
