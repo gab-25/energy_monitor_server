@@ -1,0 +1,5 @@
+services:
+  energy_monitor_server:
+    build: .
+    container_name: energy_monitor_server
+    restart: unless-stopped
