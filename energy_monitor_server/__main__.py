@@ -24,9 +24,11 @@ async def main():
 
         shelly_server = str(user_metadata['user_api_url']).replace('https://', '')
         websocket_url = f"wss://{shelly_server}:6113/shelly/wss/hk_sock?t={setting.shelly_cloud.access_token}"
+        db_states_ref = db.reference("states").child(setting.user_id)
         print(f"connecting to {shelly_server} for user {setting.user_id}")
         async for websocket in websockets.connect(websocket_url):
             print(f"connected to shelly cloud")
+            db_states_ref.child("shelly_cloud_connected").set(True)
             try:
                 async for message in websocket:
                     parsed_message = json.loads(message)
@@ -34,9 +36,10 @@ async def main():
                     if "emeters" in parsed_message["status"]:
                         power = parsed_message["status"]["emeters"][0]["power"]
                         print("save data to firebase, power:", power, "user_id:", setting.user_id)
-                        db.reference("states").child(setting.user_id).set({"power": power})
+                        db_states_ref.child("power").set(power)
             except websockets.ConnectionClosed as err:
                 print(f"error on websocket: {err}, reconnecting...")
+                db_states_ref.child("shelly_cloud_connected").set(False)
                 continue
 
 
