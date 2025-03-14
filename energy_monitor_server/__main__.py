@@ -1,21 +1,21 @@
 import firebase_admin
-import base64
 import asyncio
 import firebase_admin.db
 import websockets
 import json
-from firebase_admin import credentials, firestore, db
+from firebase_admin import credentials, firestore, db, messaging
 from energy_monitor_server.setting import Setting
 
 
 async def connection_manager(connection: dict):
-    user_id = connection["user_id"]
-    uri = connection["uri"]
-    device_id = connection["device_id"]
-
+    user_id: str = connection["user_id"]
+    uri: str = connection["uri"]
+    device_id: str = connection["device_id"]
+    power_limit: int = connection["power_limit"]
+    fcm_token: str = connection["fcm_token"]
     db_states_ref = db.reference("states").child(user_id)
-    print(f"connecting to {uri} for user {user_id}")
 
+    print(f"connecting to {uri} for user {user_id}")
     async with websockets.connect(uri) as websocket:
         print(f"connected to shelly cloud for user {user_id}")
         db_states_ref.child("shelly_cloud_connected").set(True)
@@ -24,9 +24,19 @@ async def connection_manager(connection: dict):
                 message = await websocket.recv()
                 parsed_message = json.loads(message)
                 if parsed_message['status']['mac'] == device_id:
-                    power = parsed_message["status"]["emeters"][0]["power"]
+                    power: float = parsed_message["status"]["emeters"][0]["power"]
                     print("save data to firebase, power:", power, "user_id:", user_id)
                     db_states_ref.child("power").set(power)
+                    if fcm_token and power > power_limit:
+                        print("send fcm message to user", user_id, "fcm_token", fcm_token)
+                        message = messaging.Message(
+                            notification=messaging.Notification(
+                                title="Attention",
+                                body=f"Power limit exceeded, current power: {power}W",
+                            ),
+                            token=fcm_token,
+                        )
+                        messaging.send(message)
             except websockets.ConnectionClosed as err:
                 print(f"error on websocket: {err}, reconnecting...")
                 db_states_ref.child("shelly_cloud_connected").set(False)
@@ -51,7 +61,9 @@ async def main():
         connections.append({
             "user_id": setting.user_id,
             "uri": websocket_uri,
-            "device_id": setting.shelly_cloud.device_id
+            "device_id": setting.shelly_cloud.device_id,
+            "power_limit": setting.power.limit_value,
+            "fcm_token": setting.fcm_token
         })
 
     tasks = [connection_manager(connection) for connection in connections]

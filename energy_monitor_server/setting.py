@@ -38,6 +38,7 @@ class Power:
 @dataclasses.dataclass
 class Setting:
     user_id: str
+    fcm_token: str
     shelly_cloud: ShellyCloud
     power: Power
 
@@ -45,6 +46,7 @@ class Setting:
     def from_dict(data: dict):
         return Setting(
             user_id=data['user_id'],
+            fcm_token=data['fcm_token'],
             shelly_cloud=ShellyCloud.from_dict(data['shelly_cloud']),
             power=Power.from_dict(data['power'])
         )
