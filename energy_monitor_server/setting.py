@@ -50,3 +50,10 @@ class Setting:
             shelly_cloud=ShellyCloud.from_dict(data['shelly_cloud']),
             power=Power.from_dict(data['power'])
         )
+
+    def to_dict(self):
+        return {
+            "fcm_token": self.fcm_token,
+            "shelly_cloud": dataclasses.asdict(self.shelly_cloud),
+            "power": dataclasses.asdict(self.power),
+        }
